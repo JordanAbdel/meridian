@@ -2,7 +2,10 @@ import { useState } from "react";
 import type { SavedPlan, TripForm } from "../lib/storage";
 import { generatePlan } from "../lib/planGenerator";
 import { resolveCity, offsetHours } from "../lib/timezones";
+import { lookupTrip } from "../lib/flightLookup";
 import { Disclaimer } from "../components/Disclaimer";
+
+const API_KEY_STORAGE = "meridian.rapidapi.key";
 
 const label: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
@@ -49,23 +52,70 @@ export function TripSetup({
 }) {
   const [f, setF] = useState<TripForm>(initial);
   const [error, setError] = useState<string | null>(null);
-  const set = (k: keyof TripForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof TripForm) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Manual edits to From/To invalidate any zone pinned by a flight lookup.
+    const zoneReset = k === "from" ? { fromZone: undefined } : k === "to" ? { toZone: undefined } : {};
+    setF({ ...f, [k]: e.target.value, ...zoneReset });
+  };
+
+  // Flight-number lookup state.
+  const [flightNos, setFlightNos] = useState("");
+  const [flightDate, setFlightDate] = useState("");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) ?? "");
+  const [editingKey, setEditingKey] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupMsg, setLookupMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleLookup() {
+    const nos = flightNos
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!nos.length) return setLookupMsg({ ok: false, text: "Enter a flight number, like QF1." });
+    if (!flightDate) return setLookupMsg({ ok: false, text: "Pick the departure date." });
+    if (!apiKey.trim()) {
+      return setLookupMsg({ ok: false, text: "Paste your free RapidAPI key first (see README)." });
+    }
+    setLookingUp(true);
+    setLookupMsg(null);
+    try {
+      localStorage.setItem(API_KEY_STORAGE, apiKey.trim());
+      const legs = await lookupTrip(nos, flightDate, apiKey.trim());
+      const first = legs[0];
+      const last = legs[legs.length - 1];
+      setF({
+        ...f,
+        from: first.depCity || first.depIata,
+        to: last.arrCity || last.arrIata,
+        fromZone: first.depZone,
+        toZone: last.arrZone,
+        dep: first.depLocal,
+        arr: last.arrLocal,
+      });
+      setEditingKey(false);
+      const route = [first.depIata, ...legs.map((l) => l.arrIata)].join(" → ");
+      setLookupMsg({ ok: true, text: `${legs.map((l) => l.flightNo).join(" + ")} · ${route} — filled in below.` });
+    } catch (err) {
+      setLookupMsg({ ok: false, text: err instanceof Error ? err.message : "Lookup failed." });
+    } finally {
+      setLookingUp(false);
+    }
+  }
 
   const leadOpts = [0, 1, 2, 3];
 
   function handleGenerate() {
-    const fromCity = resolveCity(f.from);
-    const toCity = resolveCity(f.to);
-    if (!fromCity) return setError(`Couldn't find a city or timezone for "${f.from}".`);
-    if (!toCity) return setError(`Couldn't find a city or timezone for "${f.to}".`);
+    const fromZone = f.fromZone ?? resolveCity(f.from)?.zone;
+    const toZone = f.toZone ?? resolveCity(f.to)?.zone;
+    if (!fromZone) return setError(`Couldn't find a city or timezone for "${f.from}".`);
+    if (!toZone) return setError(`Couldn't find a city or timezone for "${f.to}".`);
     if (!f.dep || !f.arr) return setError("Add both a departure and an arrival time.");
     if (!f.bed || !f.wake) return setError("Add your usual bedtime and wake time.");
 
     const depRef = new Date(f.dep);
     const arrRef = new Date(f.arr);
-    const originOffsetH = offsetHours(fromCity.zone, depRef);
-    const destOffsetH = offsetHours(toCity.zone, arrRef);
+    const originOffsetH = offsetHours(fromZone, depRef);
+    const destOffsetH = offsetHours(toZone, arrRef);
 
     const plan = generatePlan({
       originOffsetH,
@@ -80,8 +130,8 @@ export function TripSetup({
 
     onGenerate({
       form: f,
-      fromLabel: fromCity.label,
-      toLabel: toCity.label,
+      fromLabel: resolveCity(f.from)?.label ?? f.from,
+      toLabel: resolveCity(f.to)?.label ?? f.to,
       departureLocal: f.dep,
       arrivalLocal: f.arr,
       departureInstant: localToInstant(f.dep, originOffsetH),
@@ -109,6 +159,88 @@ export function TripSetup({
         </h1>
         <div style={{ marginTop: 6, fontSize: 13, color: "var(--muted)" }}>
           A flight and your usual sleep — that's all Meridian needs.
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: 14,
+          padding: "14px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <div style={label}>Fill from flight number</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 10 }}>
+          <input
+            value={flightNos}
+            onChange={(e) => setFlightNos(e.target.value)}
+            placeholder="QF1 — or QF11, AA100"
+            style={{ ...field, background: "var(--surface-2)", border: "1px solid var(--line-2)" }}
+          />
+          <input
+            type="date"
+            value={flightDate}
+            onChange={(e) => setFlightDate(e.target.value)}
+            style={{
+              ...timeField,
+              background: "var(--surface-2)",
+              border: "1px solid var(--line-2)",
+            }}
+          />
+        </div>
+        {(!apiKey || editingKey) ? (
+          <input
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="RapidAPI key (free — aerodatabox, saved on this device)"
+            style={{ ...field, background: "var(--surface-2)", border: "1px solid var(--line-2)", fontSize: 12.5 }}
+          />
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            API key saved on this device ·{" "}
+            <span
+              onClick={() => setEditingKey(true)}
+              style={{ color: "var(--ink-2)", cursor: "pointer", textDecoration: "underline" }}
+            >
+              change
+            </span>
+          </div>
+        )}
+        <button
+          onClick={handleLookup}
+          disabled={lookingUp}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 999,
+            border: "1px solid var(--line-2)",
+            background: "var(--surface-2)",
+            color: lookingUp ? "var(--muted)" : "var(--ink)",
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: lookingUp ? "default" : "pointer",
+            transition: "color .15s, border-color .15s",
+          }}
+        >
+          {lookingUp ? "Looking up…" : "Look up flight"}
+        </button>
+        {lookupMsg && (
+          <div
+            style={{
+              fontSize: 12.5,
+              lineHeight: 1.5,
+              color: lookupMsg.ok ? "var(--ink-2)" : "var(--accent)",
+            }}
+          >
+            {lookupMsg.text}
+          </div>
+        )}
+        <div style={{ fontSize: 11.5, lineHeight: 1.5, color: "var(--muted-2)" }}>
+          Needs a connection just for the lookup — add connecting flights in travel order.
+          Or skip it and fill the fields below yourself.
         </div>
       </div>
 

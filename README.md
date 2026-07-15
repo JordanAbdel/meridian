@@ -4,8 +4,9 @@ A local-first jet-lag planning PWA. Give it a flight and your usual sleep schedu
 builds a day-by-day circadian adjustment plan — sleep windows, when to seek and avoid bright
 light, a caffeine cutoff, and an optional melatonin timing window.
 
-Everything computes on your device. No accounts, no backend, no network calls after the
-first load — the app works fully offline once it has been opened once.
+Everything computes on your device. No accounts, no backend — the app works fully offline
+once it has been opened once. The only optional network feature is flight-number lookup
+(below); plan generation itself never touches the network.
 
 > **Disclaimer:** informational only, not medical advice. Melatonin entries are timing
 > suggestions, not dosage recommendations.
@@ -18,6 +19,22 @@ first load — the app works fully offline once it has been opened once.
 - **Trip setup** — flight, usual sleep, melatonin toggle, and how many days before the
   flight to start shifting. Generating a plan routes you to Now and persists the plan to
   localStorage, so it survives reloads.
+
+## Flight-number lookup (optional)
+
+Instead of typing the route and times, enter flight number(s) and the departure date in
+the "Fill from flight number" card and the form fills itself — including exact airport
+timezones. Connecting flights: list the legs in travel order (`QF11, AA100`); the plan
+uses the first leg's departure and the last leg's arrival.
+
+It uses the [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox) API:
+
+1. Create a free RapidAPI account and subscribe to AeroDataBox's free tier.
+2. Copy your RapidAPI key into the card's key field — it's stored only in your browser's
+   localStorage, never committed or sent anywhere except RapidAPI.
+
+The lookup needs a connection; everything else keeps working offline. If you skip the key
+entirely, manual entry works exactly as before.
 
 ## How the plan is computed
 

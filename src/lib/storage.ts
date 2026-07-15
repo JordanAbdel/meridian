@@ -5,6 +5,10 @@ import type { Plan } from "./planGenerator";
 export interface TripForm {
   from: string;
   to: string;
+  // Set by flight-number lookup: exact IANA zones for the airports. When present they
+  // take precedence over resolving the From/To text against the offline city list.
+  fromZone?: string;
+  toZone?: string;
   dep: string; // datetime-local value, e.g. "2026-07-11T21:55"
   arr: string;
   bed: string; // "HH:MM"
