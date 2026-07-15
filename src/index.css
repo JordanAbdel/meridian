@@ -1,0 +1,73 @@
+/* Self-hosted fonts (offline-safe) — replaces the design's Google Fonts CDN link. */
+@import "@fontsource/source-serif-4/400.css";
+@import "@fontsource/source-serif-4/500.css";
+@import "@fontsource/source-serif-4/400-italic.css";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens — copied verbatim from Meridian.dc.html (dark theme is the shipped look). */
+:root {
+  --bg: #1a1814;
+  --surface: #221f1a;
+  --surface-2: #2a2620;
+  --ink: #f5f1e8;
+  --ink-2: #d8d2c4;
+  --muted: #948c7e;
+  --muted-2: #6d665a;
+  --line: #2f2b25;
+  --line-2: #3a352d;
+  --accent: #d97757;
+  --accent-soft: rgba(217, 119, 87, 0.14);
+
+  --c-sleep: oklch(0.74 0.07 285);
+  --c-light: oklch(0.8 0.11 75);
+  --c-avoid: oklch(0.68 0.05 245);
+  --c-caff: oklch(0.74 0.09 140);
+  --c-mel: oklch(0.74 0.08 330);
+  --c-flight: #6d665a;
+
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+}
+body {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+#root {
+  min-height: 100vh;
+}
+a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--ink);
+}
+input {
+  font-family: inherit;
+  outline: none;
+}
+input::placeholder {
+  color: var(--muted-2);
+}
+input::-webkit-calendar-picker-indicator {
+  filter: invert(0.85) sepia(0.1);
+}
+button {
+  font-family: var(--font-sans);
+}
