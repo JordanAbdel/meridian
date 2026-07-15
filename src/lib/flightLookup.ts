@@ -60,13 +60,25 @@ export function parseLeg(entry: unknown, flightNo: string): FlightLeg | null {
   };
 }
 
-async function fetchLeg(flightNo: string, dateYMD: string, apiKey: string): Promise<FlightLeg | null> {
+/**
+ * Parse every valid entry and order them by departure. One flight number can cover
+ * several legs (e.g. QF1 is SYD→SIN→LHR, returned as two entries).
+ */
+export function parseLegs(json: unknown, flightNo: string): FlightLeg[] {
+  if (!Array.isArray(json)) return [];
+  return json
+    .map((entry) => parseLeg(entry, flightNo))
+    .filter((l): l is FlightLeg => l !== null)
+    .sort((a, b) => a.depUtc.localeCompare(b.depUtc));
+}
+
+async function fetchLegs(flightNo: string, dateYMD: string, apiKey: string): Promise<FlightLeg[]> {
   const no = flightNo.replace(/\s+/g, "").toUpperCase();
   const url = `https://${HOST}/flights/number/${encodeURIComponent(no)}/${dateYMD}?dateLocalRole=Departure&withAircraftImage=false&withLocation=false`;
   const res = await fetch(url, {
     headers: { "x-rapidapi-key": apiKey, "x-rapidapi-host": HOST },
   });
-  if (res.status === 404) return null;
+  if (res.status === 404) return [];
   if (res.status === 401 || res.status === 403) {
     throw new Error("The API key was rejected — check your RapidAPI key.");
   }
@@ -74,13 +86,7 @@ async function fetchLeg(flightNo: string, dateYMD: string, apiKey: string): Prom
     throw new Error("Rate limit hit on the flight API — try again in a minute.");
   }
   if (!res.ok) throw new Error(`Flight lookup failed (HTTP ${res.status}).`);
-  const json = (await res.json()) as unknown[];
-  if (!Array.isArray(json)) return null;
-  for (const entry of json) {
-    const leg = parseLeg(entry, no);
-    if (leg) return leg;
-  }
-  return null;
+  return parseLegs(await res.json(), no);
 }
 
 function nextDay(dateYMD: string): string {
@@ -104,23 +110,27 @@ export async function lookupTrip(
   let searchDate = dateYMD;
   let prevArrUtc: string | null = null;
 
+  // A group is all legs flown under one number on one date (QF1 = SYD→SIN→LHR is two).
+  const startsAfterPrev = (group: FlightLeg[]) =>
+    group.length > 0 && (!prevArrUtc || !group[0].depUtc || group[0].depUtc >= prevArrUtc);
+
   for (const no of flightNos) {
-    let leg = await fetchLeg(no, searchDate, apiKey);
-    if (prevArrUtc && leg && leg.depUtc && leg.depUtc < prevArrUtc) leg = null;
-    if (!leg) {
+    let group = await fetchLegs(no, searchDate, apiKey);
+    if (!startsAfterPrev(group)) {
       const alt = nextDay(searchDate);
-      leg = await fetchLeg(no, alt, apiKey);
-      if (prevArrUtc && leg && leg.depUtc && leg.depUtc < prevArrUtc) leg = null;
-      if (leg) searchDate = alt;
+      group = await fetchLegs(no, alt, apiKey);
+      if (startsAfterPrev(group)) searchDate = alt;
+      else group = [];
     }
-    if (!leg) {
+    if (!group.length) {
       throw new Error(
         `No flight found for ${no.toUpperCase()} around ${searchDate}. Check the number and date.`,
       );
     }
-    legs.push(leg);
-    prevArrUtc = leg.arrUtc || null;
-    searchDate = leg.arrLocal.slice(0, 10);
+    legs.push(...group);
+    const last = group[group.length - 1];
+    prevArrUtc = last.arrUtc || null;
+    searchDate = last.arrLocal.slice(0, 10);
   }
   return legs;
 }
