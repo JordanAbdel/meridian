@@ -174,7 +174,7 @@ export function TripSetup({
         }}
       >
         <div style={label}>Fill from flight number</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 10 }}>
+        <div className="lookup-grid">
           <input
             value={flightNos}
             onChange={(e) => setFlightNos(e.target.value)}
@@ -244,23 +244,23 @@ export function TripSetup({
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="setup-grid">
         <Labeled text="From">
           <input value={f.from} onChange={set("from")} placeholder="City or timezone" style={field} />
         </Labeled>
         <Labeled text="To">
           <input value={f.to} onChange={set("to")} placeholder="City or timezone" style={field} />
         </Labeled>
-        <Labeled text="Departure">
+        <Labeled text="Departure" smFull>
           <input type="datetime-local" value={f.dep} onChange={set("dep")} style={timeField} />
         </Labeled>
-        <Labeled text="Arrival">
+        <Labeled text="Arrival" smFull>
           <input type="datetime-local" value={f.arr} onChange={set("arr")} style={timeField} />
         </Labeled>
-        <Labeled text="Usual bedtime">
+        <Labeled text="Usual bedtime" smFull>
           <input type="time" value={f.bed} onChange={set("bed")} style={timeField} />
         </Labeled>
-        <Labeled text="Usual wake">
+        <Labeled text="Usual wake" smFull>
           <input type="time" value={f.wake} onChange={set("wake")} style={timeField} />
         </Labeled>
       </div>
@@ -363,9 +363,20 @@ export function TripSetup({
   );
 }
 
-function Labeled({ text, children }: { text: string; children: React.ReactNode }) {
+function Labeled({
+  text,
+  smFull,
+  children,
+}: {
+  text: string;
+  smFull?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+    <div
+      className={smFull ? "sm-full" : undefined}
+      style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}
+    >
       <label style={label}>{text}</label>
       {children}
     </div>

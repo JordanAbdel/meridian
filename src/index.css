@@ -72,6 +72,32 @@ input {
     font-size: 16px !important;
   }
 }
+
+/* Setup form grid. iOS renders date/time inputs at a fixed intrinsic width that
+   ignores width/min-width, so on phone-size screens any field marked .sm-full takes
+   the whole row instead of sharing a column. */
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .setup-grid > .sm-full {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Flight-lookup card: number + date share a row on wide screens, stack on phones. */
+.lookup-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 520px) {
+  .lookup-grid {
+    grid-template-columns: 1fr;
+  }
+}
 input::placeholder {
   color: var(--muted-2);
 }

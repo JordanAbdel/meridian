@@ -24,7 +24,12 @@ export default function App() {
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          padding: "20px 24px 28px",
+          // Installed-PWA mode draws edge-to-edge; keep content clear of the
+          // status bar / Dynamic Island and the home indicator.
+          paddingTop: "max(20px, env(safe-area-inset-top))",
+          paddingRight: "max(24px, env(safe-area-inset-right))",
+          paddingBottom: "max(28px, env(safe-area-inset-bottom))",
+          paddingLeft: "max(24px, env(safe-area-inset-left))",
           boxSizing: "border-box",
         }}
       >
