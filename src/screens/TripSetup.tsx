@@ -19,6 +19,11 @@ const field: React.CSSProperties = {
   fontSize: 14,
   color: "var(--ink)",
   transition: "border-color .15s",
+  // Let fields shrink inside the grid — datetime inputs otherwise force the
+  // page wider than a phone screen.
+  width: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
 };
 const timeField: React.CSSProperties = {
   ...field,
@@ -228,7 +233,7 @@ export function TripSetup({
 
 function Labeled({ text, children }: { text: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
       <label style={label}>{text}</label>
       {children}
     </div>
