@@ -63,7 +63,11 @@ export function TripSetup({
   // date input as a fully blank pill, which reads as broken.
   const [flightNos, setFlightNos] = useState("");
   const [flightDate, setFlightDate] = useState(() => ymd(new Date()));
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) ?? "");
+  // Key priority: one saved on this device, else one baked in at build time via
+  // VITE_RAPIDAPI_KEY in .env.local (gitignored — for personal builds).
+  const [apiKey, setApiKey] = useState(
+    () => localStorage.getItem(API_KEY_STORAGE) ?? (import.meta.env.VITE_RAPIDAPI_KEY as string | undefined) ?? "",
+  );
   const [editingKey, setEditingKey] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupMsg, setLookupMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -96,7 +100,8 @@ export function TripSetup({
       });
       setEditingKey(false);
       const route = [first.depIata, ...legs.map((l) => l.arrIata)].join(" → ");
-      setLookupMsg({ ok: true, text: `${legs.map((l) => l.flightNo).join(" + ")} · ${route} — filled in below.` });
+      const nosLabel = [...new Set(legs.map((l) => l.flightNo))].join(" + ");
+      setLookupMsg({ ok: true, text: `${nosLabel} · ${route} — filled in below.` });
     } catch (err) {
       setLookupMsg({ ok: false, text: err instanceof Error ? err.message : "Lookup failed." });
     } finally {
