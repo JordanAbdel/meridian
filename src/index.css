@@ -104,6 +104,20 @@ input::placeholder {
 input::-webkit-calendar-picker-indicator {
   filter: invert(0.85) sepia(0.1);
 }
+/* iOS Safari ignores width on native date/time inputs and lets them overflow
+   their container unless the native appearance is reset. The tap-to-open
+   native picker still works. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* iOS centers the value text inside date/time inputs; keep it left-aligned
+   like every other field. */
+input::-webkit-date-and-time-value {
+  text-align: left;
+}
 button {
   font-family: var(--font-sans);
 }

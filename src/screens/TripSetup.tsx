@@ -3,6 +3,7 @@ import type { SavedPlan, TripForm } from "../lib/storage";
 import { generatePlan } from "../lib/planGenerator";
 import { resolveCity, offsetHours } from "../lib/timezones";
 import { lookupTrip } from "../lib/flightLookup";
+import { ymd } from "../lib/time";
 import { Disclaimer } from "../components/Disclaimer";
 
 const API_KEY_STORAGE = "meridian.rapidapi.key";
@@ -58,9 +59,10 @@ export function TripSetup({
     setF({ ...f, [k]: e.target.value, ...zoneReset });
   };
 
-  // Flight-number lookup state.
+  // Flight-number lookup state. The date defaults to today — iOS shows an empty
+  // date input as a fully blank pill, which reads as broken.
   const [flightNos, setFlightNos] = useState("");
-  const [flightDate, setFlightDate] = useState("");
+  const [flightDate, setFlightDate] = useState(() => ymd(new Date()));
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE) ?? "");
   const [editingKey, setEditingKey] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
